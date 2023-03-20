@@ -244,22 +244,6 @@ contract ERC1155NftUpgradeable is
     }
 
     /**
-     * @dev Token ids of owner address.
-     */
-    function tokensOfOwner(
-        address account
-    ) public view virtual returns (uint256[] memory) {
-        uint256 count = balanceOf(account);
-        uint256[] memory ids = new uint256[](count);
-
-        for (uint256 i = 0; i < count; i++) {
-            ids[i] = tokenOfOwnerByIndex(account, i);
-        }
-
-        return ids;
-    }
-
-    /**
      * @dev See {ERC1155-_beforeTokenTransfer}.
      */
     function _beforeTokenTransfer(

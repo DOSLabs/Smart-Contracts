@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.22 <0.9.0;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155SupplyUpgradeable.sol";
 
-abstract contract ERC1155EnumerableUpgradeable is ERC1155SupplyUpgradeable {
+abstract contract ERC1155EnumerableUpgradeable is
+    Initializable,
+    ERC1155SupplyUpgradeable
+{
+    function __ERC1155Enumerable_init() internal onlyInitializing {}
+
+    function __ERC1155Enumerable_init_unchained() internal onlyInitializing {}
+
     // Array with all token ids, used for enumeration
     uint256[] private _allTokens;
 
@@ -60,6 +68,22 @@ abstract contract ERC1155EnumerableUpgradeable is ERC1155SupplyUpgradeable {
             "ERC721Enumerable: global index out of bounds"
         );
         return _allTokens[index];
+    }
+
+    /**
+     * @dev {ERC1155Enumerable-tokensOfOwner}.
+     */
+    function tokensOfOwner(
+        address account
+    ) public view virtual returns (uint256[] memory) {
+        uint256 count = balanceOf(account);
+        uint256[] memory ids = new uint256[](count);
+
+        for (uint256 i = 0; i < count; i++) {
+            ids[i] = tokenOfOwnerByIndex(account, i);
+        }
+
+        return ids;
     }
 
     /**
