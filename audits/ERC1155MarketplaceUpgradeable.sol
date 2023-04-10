@@ -6,17 +6,14 @@ import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol";
 
 contract ERC1155MarketplaceUpgradeable is OwnableUpgradeable {
-    // Nft contract address
+    // Nft address
     IERC1155Upgradeable private _nft;
 
-    // Token contract address
+    // Token address
     IERC20Upgradeable private _token;
 
-    // Tax fee (percentage)
-    uint256 private constant TAX_FEE = 10;
-
-    // Operators address
-    mapping(address => bool) private _operators;
+    // Fee (percentage)
+    uint256 private _fee = 5;
 
     struct Listing {
         address seller;
@@ -37,23 +34,20 @@ contract ERC1155MarketplaceUpgradeable is OwnableUpgradeable {
         __Ownable_init();
         _nft = nft_;
         _token = token_;
-        _operators[_msgSender()] = true;
     }
 
     /**
-     * @dev Set operator.
+     * @dev Get fee.
      */
-    function setOperator(address account) public virtual onlyOwner {
-        require(account != address(0), "Set operator for the zero address");
-        _operators[account] = true;
+    function getFee() public view virtual returns (uint256) {
+        return _fee;
     }
 
     /**
-     * @dev Del operator.
+     * @dev Set fee.
      */
-    function delOperator(address account) public virtual onlyOwner {
-        require(account != address(0), "Del operator for the zero address");
-        delete _operators[account];
+    function setFee(uint256 fee) public virtual onlyOwner {
+        _fee = fee;
     }
 
     /**
@@ -95,25 +89,22 @@ contract ERC1155MarketplaceUpgradeable is OwnableUpgradeable {
     /**
      * @dev Revoke.
      */
-    function revoke(address seller, uint256 id) public virtual {
-        require(
-            seller == _msgSender() || _operators[_msgSender()],
-            "Caller is not owner nor operator"
-        );
+    function revoke(uint256 id) public virtual {
+        address sender = _msgSender();
 
         (bool found, uint256 index) = (false, 0);
         Listing[] storage items = _listing[id];
 
         for (uint256 i = 0; i < items.length; i++) {
-            if (seller == items[i].seller) {
+            if (sender == items[i].seller) {
                 (found, index) = (true, i);
             }
         }
 
-        if (found) {
-            items[index] = items[items.length - 1];
-            items.pop();
-        }
+        require(found, "You are not the owner of this NFT");
+
+        items[index] = items[items.length - 1];
+        items.pop();
     }
 
     /**
@@ -127,14 +118,12 @@ contract ERC1155MarketplaceUpgradeable is OwnableUpgradeable {
             "Marketplace is not approved to transfer this NFT"
         );
 
-        uint256 price = 0;
-        (bool found, uint256 index) = (false, 0);
+        (bool found, uint256 index, uint256 price) = (false, 0, 0);
         Listing[] storage items = _listing[id];
 
         for (uint256 i = 0; i < items.length; i++) {
             if (seller == items[i].seller && amount <= items[i].amount) {
-                price += amount * items[i].price;
-                (found, index) = (true, i);
+                (found, index, price) = (true, i, amount * items[i].price);
             }
         }
 
@@ -144,7 +133,7 @@ contract ERC1155MarketplaceUpgradeable is OwnableUpgradeable {
             "Buyer doesn't approve marketplace to spend payment amount"
         );
 
-        uint256 ownerFee = (price * TAX_FEE) / 100;
+        uint256 ownerFee = (price * _fee) / 100;
         uint256 sellerFee = price - ownerFee;
 
         _token.transferFrom(buyer, owner(), ownerFee);
