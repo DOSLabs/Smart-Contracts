@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155ReceiverUpgradeable.sol";
 
-contract ERC1155NftUpgradeable is
+contract MetaDOSAsset is
     IERC1155ReceiverUpgradeable,
     ERC1155EnumerableUpgradeable,
     OwnableUpgradeable
@@ -40,9 +40,6 @@ contract ERC1155NftUpgradeable is
     // Mapping from account to list of owned TokenLock
     mapping(address => mapping(uint256 => TokenLock[])) private _tokensLock;
 
-    /**
-     * @dev See UseSignature.
-     */
     event UseSignature(
         address indexed account,
         uint256 none,
@@ -51,9 +48,6 @@ contract ERC1155NftUpgradeable is
         bytes signature
     );
 
-    /**
-     * @dev See {Initializable-initializer}.
-     */
     function initialize(
         string memory uri_,
         string memory name_,
@@ -66,9 +60,6 @@ contract ERC1155NftUpgradeable is
         _operators[_msgSender()] = true;
     }
 
-    /**
-     * @dev See {IERC1155ReceiverUpgradeable-onERC1155Received}.
-     */
     function onERC1155Received(
         address,
         address,
@@ -79,9 +70,6 @@ contract ERC1155NftUpgradeable is
         return this.onERC1155Received.selector;
     }
 
-    /**
-     * @dev See {IERC1155ReceiverUpgradeable-onERC1155BatchReceived}.
-     */
     function onERC1155BatchReceived(
         address,
         address,
@@ -92,106 +80,64 @@ contract ERC1155NftUpgradeable is
         return this.onERC1155BatchReceived.selector;
     }
 
-    /**
-     * @dev Throws if called by any account other than the operator.
-     */
     modifier onlyOperator() {
         require(_operators[_msgSender()], "Caller is not the operator");
         _;
     }
 
-    /**
-     * @dev Throws if called by any account other than the signer.
-     */
     modifier onlySigner() {
         require(_signers[_msgSender()], "Caller is not the signer");
         _;
     }
 
-    /**
-     * @dev Check operator.
-     */
     function isOperator(address account) public view virtual returns (bool) {
         return _operators[account];
     }
 
-    /**
-     * @dev Set operator.
-     */
     function setOperator(address account) public virtual onlyOwner {
         _operators[account] = true;
     }
 
-    /**
-     * @dev Del operator.
-     */
     function delOperator(address account) public virtual onlyOwner {
         delete _operators[account];
     }
 
-    /**
-     * @dev Check signer.
-     */
     function isSigner(address account) public view virtual returns (bool) {
         return _signers[account];
     }
 
-    /**
-     * @dev Set signer.
-     */
     function setSigner(address account) public virtual onlyOwner {
         _signers[account] = true;
     }
 
-    /**
-     * @dev Del signer.
-     */
     function delSigner(address account) public virtual onlyOwner {
         delete _signers[account];
     }
 
-    /**
-     * @dev Check blacklist.
-     */
     function isBlacklist(address account) public view virtual returns (bool) {
         return _blacklist[account];
     }
 
-    /**
-     * @dev Set blacklist.
-     */
     function setBlacklist(address account) public virtual onlyOperator {
         _blacklist[account] = true;
     }
 
-    /**
-     * @dev Del blacklist.
-     */
     function delBlacklist(address account) public virtual onlyOperator {
         delete _blacklist[account];
     }
 
-    /**
-     * @dev Check signature.
-     */
     function usedSignature(
         bytes memory signature
     ) public view virtual returns (bool) {
         return _usedSignatures[signature];
     }
 
-    /**
-     * @dev Destroy signature.
-     */
     function destroySignature(
         bytes memory signature
     ) public virtual onlySigner {
         _usedSignatures[signature] = true;
     }
 
-    /**
-     * @dev Check token locked.
-     */
     function _locked(
         address account,
         uint256 id,
@@ -205,9 +151,6 @@ contract ERC1155NftUpgradeable is
         return total > balanceOf(account, id);
     }
 
-    /**
-     * @dev Get TokenLock.
-     */
     function tokensLock(
         address receiver,
         uint256 id
@@ -215,9 +158,6 @@ contract ERC1155NftUpgradeable is
         return _tokensLock[receiver][id];
     }
 
-    /**
-     * @dev Lock.
-     */
     function lock(
         address sender,
         address receiver,
@@ -233,9 +173,6 @@ contract ERC1155NftUpgradeable is
         items.push(TokenLock(sender, receiver, amount));
     }
 
-    /**
-     * @dev Unlock.
-     */
     function unlock(
         address receiver,
         uint256 id,
@@ -255,9 +192,6 @@ contract ERC1155NftUpgradeable is
         items.pop();
     }
 
-    /**
-     * @dev Repay.
-     */
     function repay(address receiver, uint256 id, uint256 index) public virtual {
         require(exists(id), "Repay for nonexistent token");
 
@@ -276,30 +210,18 @@ contract ERC1155NftUpgradeable is
         _safeTransferFrom(receiver, sender, id, amount, "");
     }
 
-    /**
-     * @dev Token name.
-     */
     function name() public view virtual returns (string memory) {
         return _name;
     }
 
-    /**
-     * @dev Token symbol.
-     */
     function symbol() public view virtual returns (string memory) {
         return _symbol;
     }
 
-    /**
-     * @dev Set token URI.
-     */
     function setTokenURI(string memory uri) public virtual onlyOwner {
         _setURI(uri);
     }
 
-    /**
-     * @dev Set total supply max.
-     */
     function setTotalSupplyMax(
         uint256[] memory ids,
         uint256[] memory amounts
@@ -311,16 +233,10 @@ contract ERC1155NftUpgradeable is
         }
     }
 
-    /**
-     * @dev Total supply max.
-     */
     function totalSupplyMax(uint256 id) public view virtual returns (uint256) {
         return _totalSupplyMax[id];
     }
 
-    /**
-     * @dev See {ERC1155-_mintBatch}.
-     */
     function mint(
         address to,
         uint256[] memory ids,
@@ -329,9 +245,6 @@ contract ERC1155NftUpgradeable is
         _mint(to, ids, amounts);
     }
 
-    /**
-     * @dev See {ERC1155-_mintBatch}.
-     */
     function mint(
         uint256 none,
         uint256[] memory ids,
@@ -352,9 +265,6 @@ contract ERC1155NftUpgradeable is
         emit UseSignature(to, none, ids, amounts, signature);
     }
 
-    /**
-     * @dev See {ERC1155-_mintBatch}.
-     */
     function _mint(
         address to,
         uint256[] memory ids,
@@ -368,9 +278,6 @@ contract ERC1155NftUpgradeable is
         _mintBatch(to, ids, amounts, "");
     }
 
-    /**
-     * @dev See {ERC1155-_beforeTokenTransfer}.
-     */
     function _beforeTokenTransfer(
         address operator,
         address from,

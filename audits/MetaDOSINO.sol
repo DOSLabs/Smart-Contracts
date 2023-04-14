@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol";
 
-contract ERC1155MarketplaceUpgradeable is OwnableUpgradeable {
+contract MetaDOSINO is OwnableUpgradeable {
     // Nft address
     IERC1155Upgradeable private _nft;
 
@@ -13,7 +13,7 @@ contract ERC1155MarketplaceUpgradeable is OwnableUpgradeable {
     IERC20Upgradeable private _token;
 
     // Fee (percentage)
-    uint256 private _fee = 5;
+    uint256 private _fee;
 
     struct Listing {
         address seller;
@@ -24,9 +24,6 @@ contract ERC1155MarketplaceUpgradeable is OwnableUpgradeable {
     // Mapping from token id to Listing
     mapping(uint256 => Listing[]) _listing;
 
-    /**
-     * @dev See {Initializable-initializer}.
-     */
     function initialize(
         IERC1155Upgradeable nft_,
         IERC20Upgradeable token_
@@ -36,30 +33,18 @@ contract ERC1155MarketplaceUpgradeable is OwnableUpgradeable {
         _token = token_;
     }
 
-    /**
-     * @dev Get fee.
-     */
     function getFee() public view virtual returns (uint256) {
         return _fee;
     }
 
-    /**
-     * @dev Set fee.
-     */
     function setFee(uint256 fee) public virtual onlyOwner {
         _fee = fee;
     }
 
-    /**
-     * @dev Detail.
-     */
     function detail(uint256 id) public view virtual returns (Listing[] memory) {
         return _listing[id];
     }
 
-    /**
-     * @dev Sell.
-     */
     function sell(uint256 id, uint256 price, uint256 amount) public virtual {
         address seller = _msgSender();
 
@@ -86,9 +71,6 @@ contract ERC1155MarketplaceUpgradeable is OwnableUpgradeable {
         if (!found) items.push(Listing(seller, id, price, amount));
     }
 
-    /**
-     * @dev Revoke.
-     */
     function revoke(uint256 id) public virtual {
         address sender = _msgSender();
 
@@ -107,9 +89,6 @@ contract ERC1155MarketplaceUpgradeable is OwnableUpgradeable {
         items.pop();
     }
 
-    /**
-     * @dev Buy.
-     */
     function buy(address seller, uint256 id, uint256 amount) public virtual {
         address buyer = _msgSender();
 
