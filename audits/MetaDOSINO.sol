@@ -1,130 +1,90 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.4.22 <0.9.0;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155ReceiverUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155SupplyUpgradeable.sol";
 
-contract MetaDOSINO is OwnableUpgradeable {
-    // Nft address
-    IERC1155Upgradeable private _nft;
-
+contract MetaDOSINO is OwnableUpgradeable, ERC1155SupplyUpgradeable, IERC1155ReceiverUpgradeable {
     // Token address
     IERC20Upgradeable private _token;
 
-    // Fee (percentage)
-    uint256 private _fee;
+    // Token name
+    string private _name;
 
-    struct Listing {
-        address seller;
-        uint256 id;
-        uint256 price;
-        uint256 amount;
-    }
-    // Mapping from token id to Listing
-    mapping(uint256 => Listing[]) _listing;
+    // Token symbol
+    string private _symbol;
 
-    function initialize(
-        IERC1155Upgradeable nft_,
-        IERC20Upgradeable token_
-    ) public initializer {
+    // Mapping token id to price
+    mapping(uint256 => uint256) private _prices;
+
+    // Mapping token id to total supply max
+    mapping(uint256 => uint256) private _totalSupplyMax;
+
+    function initialize(IERC20Upgradeable token_, string memory uri_, string memory name_, string memory symbol_) public initializer {
         __Ownable_init();
-        _nft = nft_;
+        __ERC1155_init(uri_);
+        _name = name_;
         _token = token_;
+        _symbol = symbol_;
     }
 
-    function getFee() public view virtual returns (uint256) {
-        return _fee;
+    function onERC1155Received(address, address, uint256, uint256, bytes memory) public virtual override returns (bytes4) {
+        return this.onERC1155Received.selector;
     }
 
-    function setFee(uint256 fee) public virtual onlyOwner {
-        _fee = fee;
+    function onERC1155BatchReceived(address, address, uint256[] memory, uint256[] memory, bytes memory) public virtual override returns (bytes4) {
+        return this.onERC1155BatchReceived.selector;
     }
 
-    function detail(uint256 id) public view virtual returns (Listing[] memory) {
-        return _listing[id];
+    function token() public view virtual returns (IERC20Upgradeable) {
+        return _token;
     }
 
-    function sell(uint256 id, uint256 price, uint256 amount) public virtual {
-        address seller = _msgSender();
+    function name() public view virtual returns (string memory) {
+        return _name;
+    }
 
-        require(
-            amount <= _nft.balanceOf(seller, id),
-            "You are not the owner of this NFT"
-        );
-        require(
-            _nft.isApprovedForAll(seller, address(this)),
-            "Marketplace is not approved to transfer this NFT"
-        );
+    function symbol() public view virtual returns (string memory) {
+        return _symbol;
+    }
 
-        bool found = false;
-        Listing[] storage items = _listing[id];
+    function setTokenURI(string memory uri) public virtual onlyOwner {
+        _setURI(uri);
+    }
 
-        for (uint256 i = 0; i < items.length; i++) {
-            if (seller == items[i].seller) {
-                items[i] = Listing(seller, id, price, amount);
-                found = true;
-                break;
-            }
+    function setPrice(uint256[] memory ids, uint256[] memory prices) public virtual onlyOwner {
+        for (uint256 i = 0; i < ids.length; i++) {
+            _prices[ids[i]] = prices[i];
         }
-
-        if (!found) items.push(Listing(seller, id, price, amount));
     }
 
-    function revoke(uint256 id) public virtual {
-        address sender = _msgSender();
-
-        (bool found, uint256 index) = (false, 0);
-        Listing[] storage items = _listing[id];
-
-        for (uint256 i = 0; i < items.length; i++) {
-            if (sender == items[i].seller) {
-                (found, index) = (true, i);
-            }
-        }
-
-        require(found, "You are not the owner of this NFT");
-
-        items[index] = items[items.length - 1];
-        items.pop();
+    function getPrice(uint256 id) public view virtual returns (uint256) {
+        return _prices[id];
     }
 
-    function buy(address seller, uint256 id, uint256 amount) public virtual {
-        address buyer = _msgSender();
-
-        require(
-            _nft.isApprovedForAll(seller, address(this)),
-            "Marketplace is not approved to transfer this NFT"
-        );
-
-        (bool found, uint256 index, uint256 price) = (false, 0, 0);
-        Listing[] storage items = _listing[id];
-
-        for (uint256 i = 0; i < items.length; i++) {
-            if (seller == items[i].seller && amount <= items[i].amount) {
-                (found, index, price) = (true, i, amount * items[i].price);
-            }
+    function setTotalSupplyMax(uint256[] memory ids, uint256[] memory amounts) public virtual onlyOwner {
+        for (uint256 i = 0; i < ids.length; i++) {
+            _totalSupplyMax[ids[i]] = amounts[i];
         }
+    }
 
-        require(found, "Amount has not been enough");
-        require(
-            price <= _token.allowance(buyer, address(this)),
-            "Buyer doesn't approve marketplace to spend payment amount"
-        );
+    function totalSupplyMax(uint256 id) public view virtual returns (uint256) {
+        return _totalSupplyMax[id];
+    }
 
-        uint256 ownerFee = (price * _fee) / 100;
-        uint256 sellerFee = price - ownerFee;
+    function mint(address to, uint256 id, uint256 amount) public virtual {
+        uint256 total = totalSupply(id) + amount;
+        bool ok = (total <= totalSupplyMax(id));
+        require(ok, "Mint amount exceeds total supply max");
 
-        _token.transferFrom(buyer, owner(), ownerFee);
-        _token.transferFrom(buyer, seller, sellerFee);
+        address minter = _msgSender();
+        uint256 price = _prices[id] * amount;
 
-        _nft.safeTransferFrom(seller, buyer, id, amount, "");
+        require(price <= _token.allowance(minter, address(this)), "Buyer doesn't approve marketplace to spend payment amount");
 
-        if (amount < items[index].amount) {
-            items[index].amount -= amount;
-        } else {
-            items[index] = items[items.length - 1];
-            items.pop();
-        }
+        _token.transferFrom(minter, owner(), price);
+        _mint(to, id, amount, "");
     }
 }
