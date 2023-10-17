@@ -32,6 +32,11 @@ contract MetaDOSAssetOriginal is EIP712Upgradeable, OERC1155Upgradeable {
     event UseSignature(address indexed from, uint256 indexed id, uint256 value, bytes signature);
 
     function initialize(string calldata uri_, string calldata name_, string calldata symbol_, address endpoint_) public initializer {
+        require(bytes(uri_).length != 0, "Invalid uri_");
+        require(bytes(name_).length != 0, "Invalid name_");
+        require(bytes(symbol_).length != 0, "Invalid symbol_");
+        require(endpoint_ != address(0), "Invalid endpoint_");
+
         __OERC1155Upgradeable_init(uri_, endpoint_);
         __EIP712_init(name_, "1");
         _name = name_;

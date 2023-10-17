@@ -11,6 +11,11 @@ contract MetaDOSAssetWrapped is OERC1155Upgradeable {
     string private _symbol;
 
     function initialize(string calldata uri_, string calldata name_, string calldata symbol_, address endpoint_) public initializer {
+        require(bytes(uri_).length != 0, "Invalid uri_");
+        require(bytes(name_).length != 0, "Invalid name_");
+        require(bytes(symbol_).length != 0, "Invalid symbol_");
+        require(endpoint_ != address(0), "Invalid endpoint_");
+
         __OERC1155Upgradeable_init(uri_, endpoint_);
         _name = name_;
         _symbol = symbol_;
