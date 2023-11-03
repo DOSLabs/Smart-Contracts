@@ -29,7 +29,7 @@ contract MetaDOSAssetOriginal is EIP712Upgradeable, OERC1155Upgradeable {
     // Mapping token id to total supply max
     mapping(uint256 => uint256) private _totalSupplyMax;
 
-    event UseSignature(address indexed from, uint256 indexed id, uint256 value, bytes signature);
+    event MintSignature(address indexed from, uint256 indexed id, uint256 value, bytes signature);
 
     function initialize(string calldata uri_, string calldata name_, string calldata symbol_, address endpoint_) public initializer {
         require(bytes(uri_).length != 0, "invalid uri_");
@@ -43,17 +43,17 @@ contract MetaDOSAssetOriginal is EIP712Upgradeable, OERC1155Upgradeable {
         _symbol = symbol_;
     }
 
-    function getForwarder() public view virtual returns (address) {
+    function forwarder() public view virtual returns (address) {
         return _forwarder;
     }
 
-    function setForwarder(address forwarder) public virtual onlyOwner {
-        require(forwarder != address(0), "invalid address");
-        _forwarder = forwarder;
+    function setForwarder(address fwd) public virtual onlyOwner {
+        require(fwd != address(0), "invalid address");
+        _forwarder = fwd;
     }
 
     function _msgSender() internal view virtual override returns (address sender) {
-        if (getForwarder() == msg.sender) {
+        if (forwarder() == msg.sender) {
             assembly {
                 sender := shr(96, calldataload(sub(calldatasize(), 20)))
             }
@@ -63,11 +63,15 @@ contract MetaDOSAssetOriginal is EIP712Upgradeable, OERC1155Upgradeable {
     }
 
     function _msgData() internal view virtual override returns (bytes calldata) {
-        if (getForwarder() == msg.sender) {
+        if (forwarder() == msg.sender) {
             return msg.data[:msg.data.length - 20];
         } else {
             return super._msgData();
         }
+    }
+
+    function isSigner(address account) public view virtual returns (bool) {
+        return _signers[account];
     }
 
     function setSigner(address account, bool enable) public virtual onlyOwner {
@@ -80,14 +84,6 @@ contract MetaDOSAssetOriginal is EIP712Upgradeable, OERC1155Upgradeable {
         _useNonce(account);
     }
 
-    function _useNonce(address account) internal virtual returns (uint256) {
-        return _nonces[account]++;
-    }
-
-    function nonces(address account) public view virtual returns (uint256) {
-        return _nonces[account];
-    }
-
     function name() public view virtual returns (string memory) {
         return _name;
     }
@@ -96,19 +92,22 @@ contract MetaDOSAssetOriginal is EIP712Upgradeable, OERC1155Upgradeable {
         return _symbol;
     }
 
-    function setTotalSupplyMax(uint256[] calldata ids, uint256[] calldata values) public virtual onlyOwner {
-        require(ids.length != 0, "empty ids or values");
-        require(ids.length == values.length, "ids and values length mismatch");
+    function nonces(address account) public view virtual returns (uint256) {
+        return _nonces[account];
+    }
 
-        for (uint256 i = 0; i < ids.length; i++) {
-            require(values[i] != 0, "total supply max can not be set to 0");
-            require(values[i] > totalSupply(ids[i]), "supply max is too low");
-            _totalSupplyMax[ids[i]] = values[i];
-        }
+    function _useNonce(address account) internal virtual returns (uint256) {
+        return _nonces[account]++;
     }
 
     function totalSupplyMax(uint256 id) public view virtual returns (uint256) {
         return _totalSupplyMax[id];
+    }
+
+    function setTotalSupplyMax(uint256 id, uint256 value) public virtual onlyOwner {
+        require(value != 0, "total supply max can not be set to 0");
+        require(value > totalSupply(id), "supply max is too low");
+        _totalSupplyMax[id] = value;
     }
 
     function burn(uint256 id, uint256 value) public virtual {
@@ -121,15 +120,14 @@ contract MetaDOSAssetOriginal is EIP712Upgradeable, OERC1155Upgradeable {
 
         bytes32 structHash = keccak256(abi.encode(_MINT_REQUEST_HASH, to, id, value, nonces(to)));
         address signer = _hashTypedDataV4(structHash).recover(signature);
-        require(_signers[signer], "signature does not match request");
+        require(isSigner(signer), "signature does not match request");
 
         uint256 total = totalSupply(id) + value;
-        bool ok = (total <= totalSupplyMax(id));
-        require(ok, "mint value exceeds total supply max");
+        require(total <= totalSupplyMax(id), "mint value exceeds total supply max");
 
         _useNonce(to);
         _mint(to, id, value, "");
 
-        emit UseSignature(to, id, value, signature);
+        emit MintSignature(to, id, value, signature);
     }
 }
