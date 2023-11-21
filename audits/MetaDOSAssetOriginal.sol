@@ -106,7 +106,7 @@ contract MetaDOSAssetOriginal is EIP712Upgradeable, OERC1155Upgradeable {
 
     function setTotalSupplyMax(uint256 id, uint256 value) public virtual onlyOwner {
         require(value != 0, "total supply max can not be set to 0");
-        require(value > totalSupply(id), "supply max is too low");
+        require(value >= totalSupply(id), "supply max is too low");
         _totalSupplyMax[id] = value;
     }
 
