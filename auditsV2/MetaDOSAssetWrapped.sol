@@ -157,14 +157,17 @@ contract MetaDOSAssetWrapped is OwnableUpgradeable, ERC1155SupplyUpgradeable {
 
     function safeBatchTransferFrom(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) public virtual override {
         if (_msgSender() == bridge() && from == bridge()) {
-            uint256 balance = 0;
+            require(ids.length == amounts.length, "ERC1155: ids and amounts length mismatch");
+            require(to != address(0), "ERC1155: transfer to the zero address");
+
             for (uint256 i = 0; i < ids.length; ++i) {
-                balance += balanceOf(from, ids[i]);
-            }
-            if (balance == 0) {
-                _mintBatch(to, ids, amounts, data);
-            } else {
-                super.safeBatchTransferFrom(from, to, ids, amounts, data);
+                uint256 balance = balanceOf(from, ids[i]);
+                if (amounts[i] <= balance) {
+                    super.safeTransferFrom(from, to, ids[i], amounts[i], data);
+                } else {
+                    _mint(to, ids[i], amounts[i] - balance, data);
+                    super.safeTransferFrom(from, to, ids[i], balance, data);
+                }
             }
         } else {
             super.safeBatchTransferFrom(from, to, ids, amounts, data);
