@@ -110,7 +110,9 @@ contract MetaDOSAssetWrapped is OwnableUpgradeable, ERC1155SupplyUpgradeable {
         return total > balanceOf(account, id);
     }
 
-    function lock(address sender, address receiver, uint256 id, uint256 value) public virtual {
+    function lock(address receiver, uint256 id, uint256 value) public virtual {
+        address sender = _msgSender();
+
         require(exists(id), "lock for nonexistent token");
         require(!_locked(sender, id, value), "token already locked");
 
