@@ -36,6 +36,9 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, ERC1155SupplyUpg
     // Mapping address to nonce
     mapping(address => uint256) private _nonces;
 
+    // Token locked
+    mapping(uint256 => bool) private _idLockeds;
+
     struct TokenLock {
         address sender;
         address receiver;
@@ -122,6 +125,15 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, ERC1155SupplyUpg
         _blacklist[account] = enable;
     }
 
+    function isIdLocked(uint256 id) public view virtual returns (bool) {
+        return _idLockeds[id];
+    }
+
+    function setIdLocked(uint256 id, bool enable) public virtual onlyOwner {
+        require(id != 0, "invalid id");
+        _idLockeds[id] = enable;
+    }
+
     function useNonce(address account) public virtual onlyOwner {
         require(account != address(0), "invalid address");
         _useNonce(account);
@@ -144,7 +156,7 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, ERC1155SupplyUpg
         address sender = _msgSender();
 
         require(exists(id), "lock for nonexistent token");
-        require(!_locked(sender, id, value), "token already locked");
+        require(!_locked(sender, id, value), "insufficient balance for transfer");
 
         _safeTransferFrom(sender, receiver, id, value, "");
 
@@ -244,7 +256,8 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, ERC1155SupplyUpg
         if (from != address(0) && from != to) {
             require(!isBlacklist(from), "sender in blacklist");
             for (uint256 i = 0; i < ids.length; i++) {
-                require(!_locked(from, ids[i], values[i]), "token already locked");
+                if (to != address(0)) require(!isIdLocked(ids[i]), "token already locked");
+                require(!_locked(from, ids[i], values[i]), "insufficient balance for transfer");
             }
         }
     }
