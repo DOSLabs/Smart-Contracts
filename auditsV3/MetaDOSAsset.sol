@@ -44,7 +44,7 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, ERC1155SupplyUpg
     // Mapping from account to list of owned TokenLock
     mapping(address => mapping(uint256 => TokenLock[])) private _tokenLock;
 
-    event MintSignature(address indexed from, uint256 indexed id, uint256 value, bytes signature);
+    event MintSignature(address indexed to, uint256 indexed id, uint256 value, bytes signature);
 
     function initialize(string calldata uri_, string calldata name_, string calldata symbol_) public initializer {
         require(bytes(uri_).length != 0, "invalid uri_");
