@@ -145,20 +145,13 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeabl
     _idLockeds[id] = enable;
   }
 
-  function balanceLockedOf(address account, uint256 id) public view virtual returns (uint256) {
+  function balanceOfLocked(address account, uint256 id) public view virtual returns (uint256) {
     return _balanceLockeds[id][account];
   }
 
   function lockBalance(address account, uint256 id, uint256 value) public virtual {
     require(isOperator(_msgSender()), "caller is not operator");
-    require(balanceOf(account, id) >= value, "insufficient balance for lock");
-    _balanceLockeds[id][account] += value;
-  }
-
-  function unlockBalance(address account, uint256 id, uint256 value) public virtual {
-    require(isOperator(_msgSender()), "caller is not operator");
-    require(balanceLockedOf(account, id) >= value, "insufficient balance for unlock");
-    _balanceLockeds[id][account] -= value;
+    _balanceLockeds[id][account] = value;
   }
 
   function useNonce(address account) public virtual {
@@ -243,7 +236,7 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeabl
   }
 
   function _locked(address from, address to, uint256 id) internal view virtual returns (bool) {
-    return (balanceLockedOf(from, id) > balanceOf(from, id)) || (to != address(0) && to != owner() && isIdLocked(id));
+    return (balanceOfLocked(from, id) > balanceOf(from, id)) || (to != address(0) && to != owner() && isIdLocked(id));
   }
 
   function _update(address from, address to, uint256[] memory ids, uint256[] memory values) internal virtual override {
