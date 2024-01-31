@@ -226,8 +226,16 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeabl
     emit ExchangeSignature(to, ids, values, signature, ids1, values1);
   }
 
+  function _isContract(address addr) internal view virtual returns (bool) {
+    uint32 size;
+    assembly {
+      size := extcodesize(addr)
+    }
+    return (size > 0);
+  }
+
   function safeBatchTransferFrom(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) public virtual override {
-    if (_msgSender() == bridge()) {
+    if (_isContract(_msgSender()) && _msgSender() == bridge()) {
       if (from == bridge()) _mintBatch(to, ids, amounts, data);
       else if (to == bridge()) _burnBatch(from, ids, amounts);
     } else {
@@ -235,8 +243,8 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeabl
     }
   }
 
-  function _locked(address from, address to, uint256 id) internal view virtual returns (bool) {
-    return (balanceOfLocked(from, id) > balanceOf(from, id)) || (to != address(0) && to != owner() && isIdLocked(id));
+  function _locked(address from, address to, uint256 id, uint256 value) internal view virtual returns (bool) {
+    return (balanceOf(from, id) - value < balanceOfLocked(from, id)) || (to != address(0) && to != owner() && isIdLocked(id));
   }
 
   function _update(address from, address to, uint256[] memory ids, uint256[] memory values) internal virtual override {
@@ -245,7 +253,7 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeabl
     if (from != address(0)) {
       require(!isBlacklist(from), "sender in blacklist");
       for (uint256 i = 0; i < ids.length; i++) {
-        require(!_locked(from, to, ids[i]), "token already locked");
+        require(!_locked(from, to, ids[i], values[i]), "token already locked");
       }
     }
   }
