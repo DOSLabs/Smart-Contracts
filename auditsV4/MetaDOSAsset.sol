@@ -93,11 +93,9 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeabl
     _forwarder = addr;
   }
 
-  function _msgSender() internal view virtual override returns (address sender) {
+  function _msgSender() internal view virtual override returns (address) {
     if (forwarder() == msg.sender && msg.data.length >= 20) {
-      assembly {
-        sender := shr(96, calldataload(sub(calldatasize(), 20)))
-      }
+      return address(bytes20(msg.data[msg.data.length - 20:]));
     } else {
       return super._msgSender();
     }
@@ -226,16 +224,12 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeabl
     emit ExchangeSignature(to, ids, values, signature, ids1, values1);
   }
 
-  function _isContract(address addr) internal view virtual returns (bool) {
-    uint32 size;
-    assembly {
-      size := extcodesize(addr)
-    }
-    return (size > 0);
+  function isContract(address addr) public view virtual returns (bool) {
+    return (addr.code.length > 0);
   }
 
   function safeBatchTransferFrom(address from, address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data) public virtual override {
-    if (_isContract(_msgSender()) && _msgSender() == bridge()) {
+    if (isContract(_msgSender()) && _msgSender() == bridge()) {
       if (from == bridge()) _mintBatch(to, ids, amounts, data);
       else if (to == bridge()) _burnBatch(from, ids, amounts);
     } else {
