@@ -5,13 +5,14 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/metatx/ERC2771Context.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165Checker.sol";
 import "@openzeppelin/contracts-upgradeable/utils/NoncesUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155SupplyUpgradeable.sol";
 
-contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeable, ERC1155SupplyUpgradeable {
+contract MetaDOSAsset is ERC2771Context, OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeable, ERC1155SupplyUpgradeable {
   using ECDSA for bytes32;
   using ERC165Checker for address;
 
@@ -36,9 +37,6 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeabl
   // Bridge address
   address private _bridge;
 
-  // Forwarder address
-  address private _forwarder;
-
   // Signers address
   mapping(address => bool) private _signers;
 
@@ -62,6 +60,20 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeabl
 
   event ExchangeSignature(address indexed to, uint256[] ids, uint256[] values, bytes signature, uint256[] ids1, uint256[] values1);
 
+  constructor(address forwarder_) ERC2771Context(forwarder_) {}
+
+  function _msgSender() internal view virtual override(ContextUpgradeable, ERC2771Context) returns (address) {
+    return super._msgSender();
+  }
+
+  function _msgData() internal view virtual override(ContextUpgradeable, ERC2771Context) returns (bytes calldata) {
+    return super._msgData();
+  }
+
+  function _contextSuffixLength() internal view virtual override(ContextUpgradeable, ERC2771Context) returns (uint256) {
+    return super._contextSuffixLength();
+  }
+
   function initialize(string calldata uri_, string calldata name_, string calldata symbol_) public initializer {
     require(bytes(uri_).length != 0, "invalid uri_");
     require(bytes(name_).length != 0, "invalid name_");
@@ -82,31 +94,6 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeabl
   function setBridge(address addr) public virtual onlyOwner {
     require(addr != address(0), "invalid address");
     _bridge = addr;
-  }
-
-  function forwarder() public view virtual returns (address) {
-    return _forwarder;
-  }
-
-  function setForwarder(address addr) public virtual onlyOwner {
-    require(addr != address(0), "invalid address");
-    _forwarder = addr;
-  }
-
-  function _msgSender() internal view virtual override returns (address) {
-    if (forwarder() == msg.sender && msg.data.length >= 20) {
-      return address(bytes20(msg.data[msg.data.length - 20:]));
-    } else {
-      return super._msgSender();
-    }
-  }
-
-  function _msgData() internal view virtual override returns (bytes calldata) {
-    if (forwarder() == msg.sender && msg.data.length >= 20) {
-      return msg.data[:msg.data.length - 20];
-    } else {
-      return super._msgData();
-    }
   }
 
   function isSigner(address account) public view virtual returns (bool) {
@@ -242,13 +229,12 @@ contract MetaDOSAsset is OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeabl
   }
 
   function _update(address from, address to, uint256[] memory ids, uint256[] memory values) internal virtual override {
-    super._update(from, to, ids, values);
-
     if (from != address(0)) {
       require(!isBlacklist(from), "sender in blacklist");
       for (uint256 i = 0; i < ids.length; i++) {
         require(!_locked(from, to, ids[i], values[i]), "token already locked");
       }
     }
+    super._update(from, to, ids, values);
   }
 }
