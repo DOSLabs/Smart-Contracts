@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-contract MetaDOSAssetProxy is TransparentUpgradeableProxy {
+contract MetaDOSProxy is TransparentUpgradeableProxy {
   string public name;
   string public symbol;
 

@@ -12,7 +12,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155SupplyUpgradeable.sol";
 
-contract MetaDOSAsset is ERC2771Context, OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeable, ERC1155SupplyUpgradeable {
+contract MetaDOS is ERC2771Context, OwnableUpgradeable, EIP712Upgradeable, NoncesUpgradeable, ERC1155SupplyUpgradeable {
   using ECDSA for bytes32;
   using ERC165Checker for address;
 
