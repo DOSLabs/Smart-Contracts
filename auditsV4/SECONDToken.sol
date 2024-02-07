@@ -8,10 +8,12 @@ import "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/OFT.sol";
 contract SECONDToken is Ownable, ERC2771Context, OFT {
   string private _name;
   string private _symbol;
+  address private _admin;
 
   constructor(string memory name_, string memory symbol_, address endpoint_, address forwarder_, address admin_, uint256 supply_) Ownable(msg.sender) ERC2771Context(forwarder_) OFT(name_, symbol_, endpoint_, msg.sender) {
     _name = name_;
     _symbol = symbol_;
+    _admin = admin_;
     if (admin_ != address(0) && supply_ > 0) _mint(admin_, supply_ * 10 ** decimals());
   }
 
@@ -33,6 +35,10 @@ contract SECONDToken is Ownable, ERC2771Context, OFT {
 
   function symbol() public view virtual override returns (string memory) {
     return _symbol;
+  }
+
+  function admin() public view virtual returns (address) {
+    return _admin;
   }
 
   function burn(uint256 value) public virtual {
