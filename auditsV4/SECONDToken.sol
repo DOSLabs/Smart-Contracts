@@ -10,11 +10,16 @@ contract SECONDToken is Ownable, ERC2771Context, OFT {
   string private _symbol;
   address private _admin;
 
-  constructor(string memory name_, string memory symbol_, address endpoint_, address forwarder_, address admin_, uint256 supply_) Ownable(msg.sender) ERC2771Context(forwarder_) OFT(name_, symbol_, endpoint_, msg.sender) {
+  constructor(string memory name_, string memory symbol_, address endpoint_, address forwarder_, address admin_) Ownable(msg.sender) ERC2771Context(forwarder_) OFT(name_, symbol_, endpoint_, msg.sender) {
     _name = name_;
     _symbol = symbol_;
     _admin = admin_;
-    if (admin_ != address(0) && supply_ > 0) _mint(admin_, supply_ * 10 ** decimals());
+
+    uint chainId;
+    assembly {
+      chainId := chainid()
+    }
+    if (chainId == 43113 || chainId == 43114) _mint(admin_, 10_000_000_000 * 10 ** decimals());
   }
 
   function _msgSender() internal view virtual override(Context, ERC2771Context) returns (address) {
